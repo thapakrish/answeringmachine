@@ -1,8 +1,8 @@
 [app]
-name = "cartesiavoice"
+name = "answering-machine"
 
 [build]
-cmd = "echo 'No build cmd specified'"
+cmd = "uv sync --extra web --extra search"
 
 [run]
-cmd = "echo 'No run cmd specified'"
+cmd = "uv run python main.py"

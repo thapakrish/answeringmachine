@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 from google.cloud.firestore import AsyncClient
@@ -9,8 +10,13 @@ from loguru import logger
 
 class FirebaseClient:
     def __init__(self):
-        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "service-account.json")
-        creds = service_account.Credentials.from_service_account_file(cred_path)
+        sa_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        if sa_json:
+            info = json.loads(sa_json)
+            creds = service_account.Credentials.from_service_account_info(info)
+        else:
+            cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "service-account.json")
+            creds = service_account.Credentials.from_service_account_file(cred_path)
         self.db = AsyncClient(credentials=creds, project=creds.project_id)
 
     async def find_family_by_device_phone(self, phone: str) -> dict | None:

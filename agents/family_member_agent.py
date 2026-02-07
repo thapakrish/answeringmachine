@@ -3,11 +3,12 @@ from typing import AsyncIterable
 
 from line.agent import AgentClass, TurnEnv
 from line.events import AgentSendText, CallEnded, CallStarted, InputEvent, OutputEvent
-from line.llm_agent import LlmAgent, LlmConfig, end_call
+from line.llm_agent import LlmAgent, LlmConfig, end_call, web_search
 
 from agents.prompts import FAMILY_MEMBER_GREETER_PROMPT
 from tools.message_tools import make_leave_anonymous, make_leave_message
 from tools.reminder_tools import make_add_reminder
+from tools.search_tools import make_browse_website
 from tools.wellness_tools import make_check_wellness
 
 
@@ -29,7 +30,8 @@ class FamilyMemberAgent(AgentClass):
             leave_anonymous = make_leave_anonymous(db, metadata["family_id"])
             add_reminder = make_add_reminder(db, metadata["family_id"], metadata["member_id"])
             check_wellness = make_check_wellness(db, metadata["family_id"])
-            tools.extend([leave_anonymous, add_reminder, check_wellness])
+            browse_website = make_browse_website()
+            tools.extend([leave_anonymous, add_reminder, check_wellness, web_search, browse_website])
 
         device_user_name = "the device user"
 

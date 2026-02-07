@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from line.voice_agent_app import VoiceAgentApp
+from line.voice_agent_app import PreCallResult, VoiceAgentApp
 
 
 def make_pre_call_handler(db):
@@ -64,17 +64,15 @@ def make_get_agent(db):
     return get_agent
 
 
-from line.voice_agent_app import PreCallResult
+from firebase_client import FirebaseClient
 
-if os.getenv("ANTHROPIC_API_KEY"):
-    from firebase_client import FirebaseClient
-    db = FirebaseClient()
+db = FirebaseClient()
 
-    app = VoiceAgentApp(
-        get_agent=make_get_agent(db),
-        pre_call_handler=make_pre_call_handler(db),
-    )
+app = VoiceAgentApp(
+    get_agent=make_get_agent(db),
+    pre_call_handler=make_pre_call_handler(db),
+)
 
-    if __name__ == "__main__":
-        print("AnsweringMachine is running")
-        app.run()
+if __name__ == "__main__":
+    print("AnsweringMachine is running")
+    app.run()

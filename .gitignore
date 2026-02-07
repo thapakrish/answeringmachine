@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*/__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Secrets
+.env
+service-account.json
+seed_data.py
+tests/test_seed_data.py
+
+# Line SDK (local dev copy)
+line/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+*.lock.hcl
+
+# IDE / tools
+.agent/
+.agents/
+.cartesia/
+.claude/
+.playwright-cli/
+.playwright-mcp/
+
+# Logs
+firebase-debug.log
+*.log
+
+# Notes
+note.txt
+DESIGN.html

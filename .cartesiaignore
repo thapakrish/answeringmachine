@@ -1,0 +1,9 @@
+.playwright/
+.pytest_cache/
+tests/
+tasks/
+infra/
+PLAN.md
+PRD.md
+TASKS.md
+VISION.md
