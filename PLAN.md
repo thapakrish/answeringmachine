@@ -18,7 +18,7 @@ INCOMING CALL → VoiceAgentApp(get_agent, pre_call_handler)
           │
           ├── is_authorized=false → GatekeeperAgent
           │     ├── Family found via call_request.to (device phone)
-          │     ├── Asks for family passphrase (stored in families/{id}/config)
+          │     ├── Asks for family passphrase (stored as field on families/{id} document)
           │     ├── Correct → one-off session as guest (no number registration)
           │     │     └── Proceeds to FamilyMemberAgent with member_id="guest", name="Guest"
           │     │         Tools use from_member_id="guest", from_name="Guest" in Firestore
@@ -90,6 +90,7 @@ cartesiavoice/
 families/{family_id}
   ├── name: "The Smiths"
   ├── device_phones: ["+15551234567"]
+  ├── passphrase: "sunflower garden"
   ├── created_at: timestamp
   │
   ├── members/{member_id}
@@ -99,9 +100,7 @@ families/{family_id}
   │     ├── is_device_user: true
   │     └── preferences: {interests: ["mystery novels", "gardening"]}
   │
-  ├── config (document, not subcollection)
-  │     └── passphrase: "sunflower garden"  # Per-family passphrase for unknown caller verification
-  │                                         # Looked up via call_request.to → family → config
+  │     (passphrase is a field on the family document itself, not a subcollection)
   │
   ├── messages/{message_id}
   │     ├── from_member_id: "member_abc"  # or "anonymous"
