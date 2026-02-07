@@ -6,7 +6,7 @@ from line.events import AgentSendText, CallEnded, CallStarted, InputEvent, Outpu
 from line.llm_agent import LlmAgent, LlmConfig, end_call
 
 from agents.prompts import FAMILY_MEMBER_GREETER_PROMPT
-from tools.message_tools import make_leave_message
+from tools.message_tools import make_leave_anonymous, make_leave_message
 from tools.reminder_tools import make_add_reminder
 from tools.wellness_tools import make_check_wellness
 
@@ -26,9 +26,10 @@ class FamilyMemberAgent(AgentClass):
 
         # Non-guests get additional tools
         if not is_guest:
+            leave_anonymous = make_leave_anonymous(db, metadata["family_id"])
             add_reminder = make_add_reminder(db, metadata["family_id"], metadata["member_id"])
             check_wellness = make_check_wellness(db, metadata["family_id"])
-            tools.extend([add_reminder, check_wellness])
+            tools.extend([leave_anonymous, add_reminder, check_wellness])
 
         device_user_name = "the device user"
 

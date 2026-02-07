@@ -4,11 +4,12 @@ from typing import AsyncIterable
 
 from line.agent import AgentClass, TurnEnv
 from line.events import AgentSendText, CallEnded, CallStarted, InputEvent, OutputEvent
-from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call
+from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call, web_search
 
 from agents.prompts import COMPANION_PROMPT, DEVICE_USER_GREETER_PROMPT
 from tools.message_tools import make_hear_messages
 from tools.reminder_tools import make_hear_reminders, make_set_reminder
+from tools.search_tools import make_browse_website
 
 
 async def _build_greeting(metadata, db):
@@ -51,6 +52,7 @@ class DeviceUserAgent(AgentClass):
         hear_messages = make_hear_messages(db, metadata["family_id"], metadata["member_id"])
         set_reminder = make_set_reminder(db, metadata["family_id"], metadata["member_id"])
         hear_reminders = make_hear_reminders(db, metadata["family_id"], metadata["member_id"])
+        browse_website = make_browse_website()
 
         self._companion = LlmAgent(
             model="anthropic/claude-haiku-4-5-20251001",
@@ -75,7 +77,7 @@ class DeviceUserAgent(AgentClass):
         self._greeter = LlmAgent(
             model="anthropic/claude-haiku-4-5-20251001",
             api_key=self._api_key,
-            tools=[hear_messages, hear_reminders, set_reminder, companion_chat, end_call],
+            tools=[hear_messages, hear_reminders, set_reminder, web_search, browse_website, companion_chat, end_call],
             config=LlmConfig(
                 system_prompt=DEVICE_USER_GREETER_PROMPT.format(
                     member_name=metadata["member_name"],

@@ -43,3 +43,25 @@ def make_leave_message(db, family_id, from_member_id, from_name):
         return "Your message has been saved and will be delivered."
 
     return leave_message
+
+
+def make_leave_anonymous(db, family_id):
+    @loopback_tool
+    async def leave_anonymous(
+        ctx: ToolEnv,
+        message_content: Annotated[str, "The anonymous message to leave for the device user"],
+    ) -> str:
+        """Leave an anonymous message for the device user. The recipient will see it as 'A family member' instead of your name. Use when the caller wants to leave a surprise or private message."""
+        device_user = await db.get_primary_device_user(family_id)
+        to_member_id = device_user["id"] if device_user else "unknown"
+
+        await db.save_message(
+            family_id=family_id,
+            from_member_id="anonymous",
+            from_name="A family member",
+            to_member_id=to_member_id,
+            content=message_content,
+        )
+        return "Your anonymous message has been saved. It will appear as 'A family member'."
+
+    return leave_anonymous
