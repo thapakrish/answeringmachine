@@ -102,6 +102,7 @@
 | NFR-6 | Firestore operations shall be async (non-blocking) using `firebase-admin`'s `firestore.AsyncClient()` | P0 |
 | NFR-7 | Agent shall use distinct Cartesia voices per context (Mabel/Grandma for device user, Maya/Easygoing for family member, Tessa/Kind for free conversation) | P1 |
 | NFR-8 | Each family member's conversation memory shall be private — only accessible when that member calls | P0 |
+| NFR-9 | Agent shall support mid-call language switching via handoff to language-specific agents with matching Cartesia voices (configured per role) | P1 |
 
 ## 4. Out of Scope
 
@@ -111,7 +112,7 @@
 - User registration via web UI (seed data only for hackathon)
 - Firestore field-level encryption
 - Production deployment to GCP (Cartesia Cloud handles agent deployment)
-- Multi-language support
+- ~~Multi-language support~~ (implemented: Hindi and Spanish language handoff with voice switching)
 
 ## 5. Success Criteria
 

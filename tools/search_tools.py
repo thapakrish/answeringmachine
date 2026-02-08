@@ -11,41 +11,32 @@ def make_browse_website():
         url: Annotated[str, "The website URL to navigate to"],
         query: Annotated[str, "What information to find on the website"],
     ) -> AsyncIterable[str]:
-        """Browse a real website to find specific information. Use for checking library hours, community center events, local business info, restaurant menus, or any webpage content. This takes a moment to look up."""
+        """Navigate to a website and find specific information. Use for library hours, community center events, local business info. This takes a moment to look up."""
         yield "Let me look that up for you..."
 
         try:
-            from stagehand import AsyncStagehand
+            from browserbase import Browserbase
+            from stagehand import Stagehand
 
-            stagehand = AsyncStagehand(
-                browserbase_api_key=os.environ.get("BROWSERBASE_API_KEY"),
-                browserbase_project_id=os.environ.get("BROWSERBASE_PROJECT_ID"),
-                model_api_key=os.environ.get("GEMINI_API_KEY"),
+            bb = Browserbase(api_key=os.getenv("BROWSERBASE_API_KEY"))
+            session = bb.sessions.create(project_id=os.getenv("BROWSERBASE_PROJECT_ID"))
+
+            stagehand = Stagehand(
+                api_key=os.getenv("GEMINI_API_KEY"),
+                browser_base_session_id=session.id,
+                model=os.getenv("STAGEHAND_MODEL", "gemini-1.5-pro"),
             )
-            session = await stagehand.sessions.create(model_name="google/gemini-2.0-flash")
+            await stagehand.init()
 
-            yield "Opening the website now..."
+            page = stagehand.page
+            await page.goto(url)
 
-            await session.navigate(url=url)
+            result = await stagehand.extract(f"Find information about: {query}")
 
-            # Try clicking through cookie banners or popups that might block content
-            try:
-                await session.act(input="If there is a cookie consent banner or popup, dismiss or accept it")
-            except Exception:
-                pass
+            await stagehand.close()
 
-            result = await session.extract(
-                instruction=f"Extract the following information from this page: {query}. Be thorough and include relevant details like dates, times, addresses, and phone numbers if available.",
-            )
-
-            await session.end()
-
-            if result:
-                yield f"Here's what I found: {result}"
-            else:
-                yield "I opened the page but couldn't find the specific information you asked about."
-
-        except Exception as e:
-            yield f"I wasn't able to look that up right now. Let me try a web search instead."
+            yield f"Here's what I found: {result}"
+        except Exception:
+            yield "I wasn't able to look that up right now. The website might be unavailable."
 
     return browse_website

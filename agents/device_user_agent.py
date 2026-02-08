@@ -5,9 +5,9 @@ from typing import AsyncIterable
 
 import litellm
 from line.agent import AgentClass, TurnEnv
-from line.events import AgentSendText, AgentToolCalled, AgentToolReturned, AgentUpdateCall, CallEnded, CallStarted, InputEvent, OutputEvent, UserTextSent
-from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call, web_search
+from line.events import AgentSendText, AgentUpdateCall, CallEnded, CallStarted, InputEvent, OutputEvent, UserTextSent
 from loguru import logger
+from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call, web_search
 
 from agents.prompts import COMPANION_PROMPT, DEVICE_USER_GREETER_PROMPT
 from agents.role_config import get_role_config
@@ -17,7 +17,7 @@ from tools.search_tools import make_browse_website
 
 
 async def _build_greeting(metadata, db):
-    """Build a dynamic greeting with time-of-day, unread count, and memory."""
+    """Build a dynamic greeting with time-of-day, unread count."""
     name = metadata["member_name"]
     family_id = metadata["family_id"]
     member_id = metadata["member_id"]
@@ -53,8 +53,6 @@ class DeviceUserAgent(AgentClass):
         hear_reminders = make_hear_reminders(db, metadata["family_id"], metadata["member_id"])
         browse_website = make_browse_website()
 
-        personality = self._role_config["personality"]
-
         self._companion = LlmAgent(
             model="anthropic/claude-haiku-4-5-20251001",
             api_key=self._api_key,
@@ -63,7 +61,6 @@ class DeviceUserAgent(AgentClass):
                 system_prompt=COMPANION_PROMPT.format(
                     member_name=metadata["member_name"],
                     member_role=metadata["member_role"],
-                    personality=personality,
                     preferences="",
                     memory_context="",
                 ),
@@ -72,8 +69,8 @@ class DeviceUserAgent(AgentClass):
 
         companion_chat = agent_as_handoff(
             self._companion,
-            name="free_conversation",
-            description="Transfer to open-ended conversation mode. Use when the user wants to chat, talk, or have a longer conversation about their day, interests, or stories.",
+            name="companion_chat",
+            description="Transfer to companion chat mode for friendly conversation. Use when the user wants to chat, talk, or have a conversation.",
         )
 
         self._greeter = LlmAgent(
@@ -84,7 +81,6 @@ class DeviceUserAgent(AgentClass):
                 system_prompt=DEVICE_USER_GREETER_PROMPT.format(
                     member_name=metadata["member_name"],
                     member_role=metadata["member_role"],
-                    personality=personality,
                     preferences="",
                     memory_context="",
                 ),
@@ -98,7 +94,7 @@ class DeviceUserAgent(AgentClass):
         return [t.__name__ if callable(t) else str(t) for t in self._greeter._tools]
 
     async def _load_memory_context(self):
-        """Load memory from DB and update system prompts with real context."""
+        """Load conversation memory into system prompts so the LLM knows past interactions."""
         family_id = self._metadata["family_id"]
         member_id = self._metadata["member_id"]
         memory = await self._db.get_memory(family_id, member_id)
@@ -112,13 +108,11 @@ class DeviceUserAgent(AgentClass):
 
         prefs = memory.get("preferences", {})
         preferences = ", ".join(prefs.get("interests", [])) if prefs else ""
-        personality = self._role_config["personality"]
 
         greeter_config = LlmConfig(
             system_prompt=DEVICE_USER_GREETER_PROMPT.format(
                 member_name=self._metadata["member_name"],
                 member_role=self._metadata["member_role"],
-                personality=personality,
                 preferences=preferences,
                 memory_context=memory_context,
             ),
@@ -130,7 +124,6 @@ class DeviceUserAgent(AgentClass):
             system_prompt=COMPANION_PROMPT.format(
                 member_name=self._metadata["member_name"],
                 member_role=self._metadata["member_role"],
-                personality=personality,
                 preferences=preferences,
                 memory_context=memory_context,
             ),
@@ -140,9 +133,14 @@ class DeviceUserAgent(AgentClass):
 
     async def process(self, env: TurnEnv, event: InputEvent) -> AsyncIterable[OutputEvent]:
         if isinstance(event, CallStarted):
+            logger.info(f"DeviceUserAgent: CallStarted for {self._metadata.get('member_name')}")
             yield AgentUpdateCall(voice_id=self._role_config["voice_id"])
-            await self._load_memory_context()
-            greeting = await _build_greeting(self._metadata, self._db)
+            try:
+                await self._load_memory_context()
+                greeting = await _build_greeting(self._metadata, self._db)
+            except Exception as e:
+                logger.error(f"DeviceUserAgent: greeting failed: {e}")
+                greeting = f"Hello, {self._metadata.get('member_name', 'there')}! How can I help you today?"
             yield AgentSendText(text=greeting)
             return
 
@@ -159,14 +157,11 @@ class DeviceUserAgent(AgentClass):
     async def _save_conversation_memory(self):
         """Summarize the conversation and save to Firestore."""
         try:
-            # Build interleaved transcript from input history and local history
-            # Concatenate consecutive AgentSendText chunks into single messages
             lines = []
             for ev in self._input_history:
                 if isinstance(ev, UserTextSent):
                     lines.append(f"User: {ev.content}")
 
-            # Concatenate streamed agent text chunks into complete messages
             agent_parts = []
             for _, ev in self._greeter._local_history:
                 if isinstance(ev, AgentSendText):
@@ -186,12 +181,11 @@ class DeviceUserAgent(AgentClass):
                 api_key=self._api_key,
                 messages=[{
                     "role": "user",
-                    "content": f"Summarize this phone conversation in 2-3 sentences capturing key details, requests, and context that would be useful to remember for future calls. Also extract: topics (list of keywords) and mood (one word). Return JSON only: {{\"summary\": \"...\", \"topics\": [...], \"mood\": \"...\"}}\n\n{transcript}",
+                    "content": f"Summarize this phone conversation in 2-3 sentences. Extract: topics (keywords) and mood (one word). Return JSON: {{\"summary\": \"...\", \"topics\": [...], \"mood\": \"...\"}}\n\n{transcript}",
                 }],
                 max_tokens=300,
             )
             raw = response.choices[0].message.content.strip()
-            # Strip markdown code fences if present
             if raw.startswith("```"):
                 raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
             data = json.loads(raw)
@@ -202,8 +196,7 @@ class DeviceUserAgent(AgentClass):
                 summary=data.get("summary", "Had a conversation"),
                 topics=data.get("topics", []),
                 mood=data.get("mood", "neutral"),
-                transcript=transcript,
             )
-            logger.info(f"Saved conversation memory: {data['summary']}")
+            logger.info(f"Saved conversation memory: {data.get('summary', '')[:80]}")
         except Exception as e:
             logger.error(f"Failed to save conversation memory: {e}")

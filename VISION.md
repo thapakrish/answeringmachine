@@ -57,6 +57,7 @@ Call the family number from your own phone. The agent recognizes you by caller I
 | **Wellness Check** | Family can ask about recent activity, mood, last interaction |
 | **Unknown Caller Handling** | Unregistered numbers can verify via family passphrase, or are blocked and logged |
 | **Expressive Voice** | Different Cartesia voices for different contexts — warm grandma voice for device user, casual voice for family members |
+| **Language Handoff** | Mid-call language switching — if a caller speaks Hindi or asks to switch languages, the agent hands off to a language-specific agent with a matching voice |
 | **Memory Privacy** | Each family member's conversation history is private to them — no cross-member leakage |
 
 ## Target Users

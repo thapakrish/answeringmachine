@@ -10,6 +10,7 @@ from line.events import (
     OutputEvent,
     UserTextSent,
 )
+from loguru import logger
 
 
 class GatekeeperAgent(AgentClass):
@@ -22,7 +23,12 @@ class GatekeeperAgent(AgentClass):
 
     async def process(self, env: TurnEnv, event: InputEvent) -> AsyncIterable[OutputEvent]:
         if isinstance(event, CallStarted):
-            self._passphrase = await self._db.get_passphrase(self._metadata["family_id"])
+            logger.info(f"GatekeeperAgent: CallStarted for {self._metadata.get('caller_phone', 'unknown')}")
+            try:
+                self._passphrase = await self._db.get_passphrase(self._metadata["family_id"])
+            except Exception as e:
+                logger.error(f"GatekeeperAgent: failed to get passphrase: {e}")
+                self._passphrase = None
             if not self._passphrase:
                 yield AgentSendText(text="This number is not accepting calls from unregistered numbers. Goodbye.")
                 yield AgentEndCall()

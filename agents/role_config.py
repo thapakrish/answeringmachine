@@ -1,12 +1,43 @@
-"""Role-based voice and personality configuration.
+"""Role-based voice, personality, and language configuration.
 
-Each role maps to a Cartesia voice ID and a personality description
-injected into the system prompt. The agent adapts its tone and voice
-depending on who is calling (device user) or being called by (family member).
+Each role maps to a Cartesia voice ID, a personality description
+injected into the system prompt, and optional language handoffs.
+The agent adapts its tone, voice, and language depending on who is calling.
 """
 
 # Voice IDs from Cartesia's voice library
 # Browse: https://play.cartesia.ai/voices
+
+# Language handoff configurations
+# Each language has a Cartesia voice and system prompt for that language
+LANGUAGE_CONFIGS = {
+    "hi": {
+        "name": "Hindi",
+        "voice_id": "393dd459-f8d8-4c3e-a86b-ec43a1113d0b",  # Rahul - Calm Office Guy
+        "system_prompt": (
+            "आप एक सहायक वॉइस असिस्टेंट हैं। हिंदी में बात करें। "
+            "जवाब संक्षिप्त और स्पष्ट रखें। यह एक फोन कॉल है।"
+        ),
+        "handoff_description": (
+            "Switch to Hindi-speaking mode. "
+            "Use when the caller asks to speak in Hindi or starts speaking Hindi."
+        ),
+        "handoff_message": "हिंदी में बात करते हैं।",
+    },
+    "es": {
+        "name": "Spanish",
+        "voice_id": "846d6cb0-2301-48b6-9571-13571f3bd45e",  # Spanish voice
+        "system_prompt": (
+            "Eres un asistente de voz servicial. Habla solo en español. "
+            "Mantén las respuestas breves y claras. Esta es una llamada telefónica."
+        ),
+        "handoff_description": (
+            "Switch to Spanish-speaking mode. "
+            "Use when the caller asks to speak in Spanish or starts speaking Spanish."
+        ),
+        "handoff_message": "Cambiando a español.",
+    },
+}
 
 ROLE_DEFAULTS = {
     "grandparent": {
@@ -30,6 +61,7 @@ ROLE_DEFAULTS = {
             "Be calm and professional. Keep responses concise and to the point. "
             "Polite but not overly friendly — like a helpful receptionist."
         ),
+        "languages": ["hi"],
     },
     "daughter": {
         "voice_id": "cbaf8084-f009-4838-a096-07ee2e6612b1",  # Maya - Easygoing Ally
@@ -92,3 +124,10 @@ _DEFAULT = {
 def get_role_config(role: str) -> dict:
     """Get voice_id and personality for a given role."""
     return ROLE_DEFAULTS.get(role, _DEFAULT)
+
+
+def get_language_configs(role: str) -> list[dict]:
+    """Get language handoff configs for a role. Returns list of LANGUAGE_CONFIGS entries."""
+    role_cfg = ROLE_DEFAULTS.get(role, _DEFAULT)
+    lang_codes = role_cfg.get("languages", [])
+    return [LANGUAGE_CONFIGS[code] for code in lang_codes if code in LANGUAGE_CONFIGS]
