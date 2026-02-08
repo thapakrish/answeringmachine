@@ -76,12 +76,13 @@ async def test_greeting_includes_unread_count(metadata, mock_db_with_data):
 
 
 @pytest.mark.asyncio
-async def test_greeting_includes_memory(metadata, mock_db_with_data):
+async def test_greeting_does_not_include_memory(metadata, mock_db_with_data):
+    """Memory should NOT be mentioned in greeting — only when caller asks."""
     from agents.device_user_agent import _build_greeting
     with patch("agents.device_user_agent.datetime") as mock_dt:
         mock_dt.now.return_value = datetime(2025, 6, 15, 9, 0, 0)
         greeting = await _build_greeting(metadata, mock_db_with_data)
-    assert "mystery novel" in greeting.lower()
+    assert "mystery novel" not in greeting.lower()
 
 
 @pytest.mark.asyncio

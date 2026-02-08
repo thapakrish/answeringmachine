@@ -35,14 +35,14 @@
 | FR-2.6 | `set_reminder` tool shall save a reminder to Firestore | P1 |
 | FR-2.7 | `quick_search` tool shall use built-in `web_search` for simple queries (weather, facts) | P1 |
 | FR-2.8 | `browse_website` tool shall use Browserbase/Stagehand to navigate specific websites, running as a background tool | P2 |
-| FR-2.9 | `companion_chat` shall hand off to a companion LlmAgent for casual conversation | P1 |
+| FR-2.9 | `free_conversation` shall hand off to a dedicated LlmAgent for open-ended voice conversation | P1 |
 | FR-2.10 | On `CallEnded`, agent shall save a conversation summary to the memory collection | P1 |
 
 ### FR-3: Family Member Experience (Sarah/Mike calls in)
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR-3.1 | Agent shall greet family member by name | P0 |
+| FR-3.1 | Agent shall greet family member by name, referencing their own recent conversation memory if available | P0 |
 | FR-3.2 | `leave_message` tool shall save a message to Firestore attributed to the caller | P0 |
 | FR-3.3 | `leave_anonymous` tool shall save a message with `from_name="A family member"` and `from_member_id="anonymous"` | P1 |
 | FR-3.4 | `check_wellness` tool shall return recent activity, last interaction time, and conversation mood | P1 |
@@ -65,7 +65,7 @@
 | FR-5.2 | Member documents shall store `name`, `role`, `phone_numbers[]`, `is_device_user`, `preferences` | P0 |
 | FR-5.3 | Message documents shall store `from_member_id`, `from_name`, `to_member_id`, `content`, `read`, `created_at` | P0 |
 | FR-5.4 | Reminder documents shall store `for_member_id`, `created_by_member_id`, `content`, `time`, `recurring`, `active` | P1 |
-| FR-5.5 | Memory documents shall store `recent_conversations[]`, `preferences`, `last_interaction` | P1 |
+| FR-5.5 | Memory documents shall store `recent_conversations[]` (with optional `transcript`), `preferences`, `last_interaction`. Memory is per-member — each family member's history is private to them | P1 |
 | FR-5.6 | Call log documents shall store `caller_phone`, `caller_member_id`, `caller_name`, `timestamp`, `summary`, `is_anonymous` | P1 |
 | FR-5.7 | Unknown call attempts shall store `phone_number`, `target_device_phone`, `family_id`, `timestamp`, `blocked` | P1 |
 
@@ -100,6 +100,8 @@
 | NFR-4 | All demo data shall be synthetic (no real PII) | P0 |
 | NFR-5 | System shall be testable via `cartesia chat <port>` in text mode | P0 |
 | NFR-6 | Firestore operations shall be async (non-blocking) using `firebase-admin`'s `firestore.AsyncClient()` | P0 |
+| NFR-7 | Agent shall use distinct Cartesia voices per context (Mabel/Grandma for device user, Maya/Easygoing for family member, Tessa/Kind for free conversation) | P1 |
+| NFR-8 | Each family member's conversation memory shall be private — only accessible when that member calls | P0 |
 
 ## 4. Out of Scope
 

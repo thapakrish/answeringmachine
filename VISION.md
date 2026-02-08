@@ -21,10 +21,9 @@ Pick up the phone. That's it.
 > "Good morning, Rose! You have 2 new messages. Last time we talked, you mentioned finishing that mystery novel. What would you like to do?"
 
 - **Hear messages** from family members
-- **Chat** with a warm, patient companion
+- **Have a conversation** — the agent is a warm, patient conversationalist who remembers past chats
 - **Ask questions** — "What's the weather this weekend?" or "Are there any events at the library?"
 - **Set reminders** — "Remind me to call Sarah on Thursday"
-- **Just talk** — the agent is a friendly companion who remembers past conversations
 
 ### For Family Members (Kids, Grandkids, Spouses)
 
@@ -53,10 +52,12 @@ Call the family number from your own phone. The agent recognizes you by caller I
 | **Conversation Memory** | Agent remembers past interactions: "You mentioned you were reading a mystery novel..." |
 | **Local Search** | Quick web search for weather/facts + Browserbase for navigating specific sites (library, community center) |
 | **Reminders** | Family or device user can set reminders (medicine, appointments, calls) |
-| **Companion Chat** | Warm, patient conversational partner for lonely moments |
+| **Free Conversation** | Warm, patient conversational partner — not a chatbot, but a natural voice experience |
 | **Anonymous Calling** | In-call option to leave a message without revealing the sender |
 | **Wellness Check** | Family can ask about recent activity, mood, last interaction |
 | **Unknown Caller Handling** | Unregistered numbers can verify via family passphrase, or are blocked and logged |
+| **Expressive Voice** | Different Cartesia voices for different contexts — warm grandma voice for device user, casual voice for family members |
+| **Memory Privacy** | Each family member's conversation history is private to them — no cross-member leakage |
 
 ## Target Users
 
@@ -81,7 +82,7 @@ Call the family number from your own phone. The agent recognizes you by caller I
 Sarah calls the family number. The agent greets her by name. She leaves a message for Grandma about Sunday dinner and sets a medicine reminder.
 
 **Act 2 — Grandma picks up (45s)**
-Rose picks up the device. "Good morning, Rose! You have 1 new message. Last time we talked, you were finishing a mystery novel." She hears Sarah's message, asks about Sunday's weather (web search), then asks the agent to look up library events (Browserbase navigates the library website). Chats with companion agent about her book.
+Rose picks up the device. "Good morning, Rose! You have 1 new message. Last time we talked, you were finishing a mystery novel." She hears Sarah's message, asks about Sunday's weather (web search), then asks the agent to look up library events (Browserbase navigates the library website). Has an open-ended conversation about her book.
 
 **Act 3 — Unknown caller with passphrase (15s)**
 Unknown number calls. "I don't recognize this number. If you're a family member, please say the family passphrase." Caller says passphrase → verified and connected. Wrong answer → blocked and logged.

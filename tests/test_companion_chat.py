@@ -38,11 +38,11 @@ def test_companion_agent_exists(metadata, mock_db):
     assert agent._companion is not None
 
 
-def test_companion_handoff_tool_exists(metadata, mock_db):
+def test_conversation_handoff_tool_exists(metadata, mock_db):
     from agents.device_user_agent import DeviceUserAgent
     agent = DeviceUserAgent(metadata=metadata, db=mock_db)
     tool_names = agent.tool_names()
-    assert any("companion" in name.lower() for name in tool_names)
+    assert any("free_conversation" in name.lower() for name in tool_names)
 
 
 def test_companion_has_end_call(metadata, mock_db):

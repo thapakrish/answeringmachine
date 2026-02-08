@@ -124,8 +124,8 @@ async def test_device_user_greeting_includes_unread(device_user_metadata, mock_d
 
 
 @pytest.mark.asyncio
-async def test_device_user_greeting_includes_memory(device_user_metadata, mock_db, mock_env):
-    """Greeting references last conversation from memory."""
+async def test_device_user_greeting_does_not_include_memory(device_user_metadata, mock_db, mock_env):
+    """Greeting should NOT reference last conversation — only when caller asks."""
     from agents.device_user_agent import DeviceUserAgent
     agent = DeviceUserAgent(metadata=device_user_metadata, db=mock_db)
 
@@ -135,17 +135,24 @@ async def test_device_user_greeting_includes_memory(device_user_metadata, mock_d
 
     text_events = [e for e in events if isinstance(e, AgentSendText)]
     greeting = text_events[0].text.lower()
-    assert "mystery novels" in greeting
+    assert "mystery novels" not in greeting
 
 
 @pytest.mark.asyncio
-async def test_device_user_call_ended_saves_memory(device_user_metadata, mock_db, mock_env):
+async def test_device_user_call_ended_saves_memory(device_user_metadata, mock_db, mock_env, monkeypatch):
     """On CallEnded, memory is saved if there was a conversation."""
     from agents.device_user_agent import DeviceUserAgent
+    import litellm
+
     agent = DeviceUserAgent(metadata=device_user_metadata, db=mock_db)
-    agent._conversation_summary = "Discussed the weather"
-    agent._conversation_topics = ["weather"]
-    agent._conversation_mood = "neutral"
+    # Simulate a conversation by adding input history
+    agent._input_history.append(UserTextSent(content="How's the weather?"))
+
+    # Mock litellm.acompletion to return a summary
+    mock_response = AsyncMock()
+    mock_response.choices = [AsyncMock()]
+    mock_response.choices[0].message.content = '{"summary": "Discussed the weather", "topics": ["weather"], "mood": "neutral"}'
+    monkeypatch.setattr(litellm, "acompletion", AsyncMock(return_value=mock_response))
 
     async for _ in agent.process(mock_env, CallEnded()):
         pass

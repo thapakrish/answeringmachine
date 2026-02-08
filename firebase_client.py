@@ -100,13 +100,15 @@ class FirebaseClient:
             return {"recent_conversations": [], "preferences": {}, "last_interaction": None}
         return doc.to_dict()
 
-    async def save_memory(self, family_id: str, member_id: str, summary: str, topics: list, mood: str):
+    async def save_memory(self, family_id: str, member_id: str, summary: str, topics: list, mood: str, transcript: str = ""):
         """Save a conversation summary to memory, capped at 20 entries."""
         ref = self.db.collection("families").document(family_id).collection("memory").document(member_id)
         doc = await ref.get()
 
         now = datetime.now().isoformat()
         entry = {"date": now, "summary": summary, "topics": topics, "mood": mood}
+        if transcript:
+            entry["transcript"] = transcript
 
         if doc.exists:
             data = doc.to_dict()
