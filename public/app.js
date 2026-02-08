@@ -1,10 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp,
+  getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/11.3.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc,
+  serverTimestamp, query, where, arrayUnion,
 } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-firestore.js";
 
-// Firebase config
 const app = initializeApp({
   apiKey: "REDACTED_API_KEY",
   authDomain: "contlearn.firebaseapp.com",
@@ -16,14 +18,17 @@ const app = initializeApp({
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
 // State
+let currentUser = null;
 let currentFamilyId = null;
 let currentFamilyData = null;
 
 const $ = (id) => document.getElementById(id);
 
 const loginScreen = $("login-screen");
+const familyScreen = $("family-screen");
 const dashScreen = $("dashboard-screen");
 
 // DOM helpers
@@ -53,23 +58,103 @@ function formatTimestamp(ts) {
   return d.toLocaleString();
 }
 
-// Auth
-async function ensureAnonymousAuth() {
-  if (!auth.currentUser) {
-    await signInAnonymously(auth);
+// ── Google Auth ──
+
+$("btn-google-signin").addEventListener("click", async () => {
+  const errEl = $("google-error");
+  errEl.style.display = "none";
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    if (err.code !== "auth/popup-closed-by-user") {
+      errEl.textContent = "Sign-in failed: " + err.message;
+      errEl.style.display = "block";
+    }
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (user) {
+    loginScreen.classList.add("hidden");
+    $("user-email").textContent = user.email;
+
+    // Check if we have a saved family
+    const savedId = sessionStorage.getItem("familyId");
+    if (savedId) {
+      try {
+        const snap = await getDoc(doc(db, "families", savedId));
+        if (snap.exists()) {
+          currentFamilyId = savedId;
+          currentFamilyData = snap.data();
+          showDashboard();
+          return;
+        }
+      } catch (_) {}
+      sessionStorage.removeItem("familyId");
+    }
+
+    showFamilyPicker();
+  } else {
+    // Signed out
+    loginScreen.classList.remove("hidden");
+    familyScreen.classList.add("hidden");
+    dashScreen.classList.add("hidden");
+    currentFamilyId = null;
+    currentFamilyData = null;
+    sessionStorage.removeItem("familyId");
+  }
+});
+
+// ── Family Picker ──
+
+async function showFamilyPicker() {
+  familyScreen.classList.remove("hidden");
+  dashScreen.classList.add("hidden");
+  loginScreen.classList.add("hidden");
+
+  const container = $("owned-families");
+  clearChildren(container);
+
+  // Find families where this user is an owner
+  try {
+    const q = query(
+      collection(db, "families"),
+      where("owner_uids", "array-contains", currentUser.uid)
+    );
+    const snap = await getDocs(q);
+    if (snap.size > 0) {
+      container.appendChild(el("div", { className: "tools-label", style: "margin-bottom:0.5rem;color:var(--text-muted);font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;" }, "Your Families"));
+      snap.forEach((d) => {
+        const data = d.data();
+        const btn = el("button", { className: "family-pick-btn" },
+          el("span", { className: "fpb-name" }, data.name || d.id),
+          document.createTextNode(" "),
+          el("span", { className: "fpb-id" }, d.id),
+        );
+        btn.addEventListener("click", () => {
+          currentFamilyId = d.id;
+          currentFamilyData = data;
+          sessionStorage.setItem("familyId", d.id);
+          showDashboard();
+        });
+        container.appendChild(btn);
+      });
+    }
+  } catch (_) {
+    // Index might not exist yet; that's fine, user can still join via ID
   }
 }
 
-// Login
-$("signin-form").addEventListener("submit", async (e) => {
+// Join existing family
+$("join-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const familyId = $("signin-family-id").value.trim();
-  const passphrase = $("signin-passphrase").value.trim();
-  const errEl = $("signin-error");
+  const familyId = $("join-family-id").value.trim();
+  const passphrase = $("join-passphrase").value.trim();
+  const errEl = $("join-error");
   errEl.style.display = "none";
 
   try {
-    await ensureAnonymousAuth();
     const snap = await getDoc(doc(db, "families", familyId));
     if (!snap.exists()) {
       errEl.textContent = "Family not found.";
@@ -82,8 +167,10 @@ $("signin-form").addEventListener("submit", async (e) => {
       errEl.style.display = "block";
       return;
     }
+    // Add user as owner
+    await setDoc(doc(db, "families", familyId), { owner_uids: arrayUnion(currentUser.uid) }, { merge: true });
     currentFamilyId = familyId;
-    currentFamilyData = data;
+    currentFamilyData = { ...data, owner_uids: [...(data.owner_uids || []), currentUser.uid] };
     sessionStorage.setItem("familyId", familyId);
     showDashboard();
   } catch (err) {
@@ -111,7 +198,6 @@ $("create-form").addEventListener("submit", async (e) => {
   }
 
   try {
-    await ensureAnonymousAuth();
     const existing = await getDoc(doc(db, "families", familyId));
     if (existing.exists()) {
       errEl.textContent = "Family ID already exists.";
@@ -122,40 +208,48 @@ $("create-form").addEventListener("submit", async (e) => {
       name,
       device_phones: [phone],
       passphrase,
+      owner_uids: [currentUser.uid],
       created_at: serverTimestamp(),
     });
-    okEl.textContent = `Family "${name}" created! Sign in with ID: ${familyId}`;
-    okEl.style.display = "block";
-    $("create-form").reset();
+    currentFamilyId = familyId;
+    currentFamilyData = { name, device_phones: [phone], passphrase, owner_uids: [currentUser.uid] };
+    sessionStorage.setItem("familyId", familyId);
+    showDashboard();
   } catch (err) {
     errEl.textContent = "Error: " + err.message;
     errEl.style.display = "block";
   }
 });
 
-// Toggle login/create
+// Toggle create form
 $("show-create").addEventListener("click", () => {
-  $("signin-box").classList.add("hidden");
   $("create-box").classList.remove("hidden");
+  $("show-create").classList.add("hidden");
 });
-$("show-signin").addEventListener("click", () => {
+$("hide-create").addEventListener("click", () => {
   $("create-box").classList.add("hidden");
-  $("signin-box").classList.remove("hidden");
+  $("show-create").classList.remove("hidden");
 });
 
-// Logout
+// Switch account (sign out of Google)
+$("btn-switch-account").addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+// ── Dashboard ──
+
+// Logout (back to family picker)
 $("btn-logout").addEventListener("click", () => {
   currentFamilyId = null;
   currentFamilyData = null;
   sessionStorage.removeItem("familyId");
   dashScreen.classList.add("hidden");
-  loginScreen.classList.remove("hidden");
-  $("signin-form").reset();
+  showFamilyPicker();
 });
 
-// Dashboard
 async function showDashboard() {
   loginScreen.classList.add("hidden");
+  familyScreen.classList.add("hidden");
   dashScreen.classList.remove("hidden");
   $("dash-family-name").textContent = currentFamilyData.name;
   $("dash-family-id").textContent = currentFamilyId;
@@ -408,21 +502,3 @@ async function loadReminders() {
 
   list.classList.remove("hidden");
 }
-
-// Session restore
-(async function init() {
-  const savedId = sessionStorage.getItem("familyId");
-  if (savedId) {
-    try {
-      await ensureAnonymousAuth();
-      const snap = await getDoc(doc(db, "families", savedId));
-      if (snap.exists()) {
-        currentFamilyId = savedId;
-        currentFamilyData = snap.data();
-        showDashboard();
-        return;
-      }
-    } catch (_) {}
-    sessionStorage.removeItem("familyId");
-  }
-})();

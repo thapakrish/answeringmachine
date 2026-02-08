@@ -14,49 +14,84 @@
       <h1 class="login-title">AnsweringMachine</h1>
       <p class="login-subtitle">Family voice agent dashboard</p>
 
-      <!-- Sign In -->
-      <div id="signin-box" class="login-box">
-        <h2>Sign In</h2>
-        <div id="signin-error" class="error-msg"></div>
-        <form id="signin-form">
-          <div class="form-group">
-            <label for="signin-family-id">Family ID</label>
-            <input type="text" id="signin-family-id" placeholder="e.g. smith_family" required>
-          </div>
-          <div class="form-group">
-            <label for="signin-passphrase">Passphrase</label>
-            <input type="password" id="signin-passphrase" placeholder="Family passphrase" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Sign In</button>
-        </form>
-        <button class="toggle-link" id="show-create">Create New Family</button>
+      <!-- Google Sign In -->
+      <div id="google-box" class="login-box">
+        <h2>Welcome</h2>
+        <div id="google-error" class="error-msg"></div>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.25rem;">Sign in with your Google account to manage your family.</p>
+        <button class="btn btn-google" id="btn-google-signin">
+          <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:middle;margin-right:8px;">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Sign in with Google
+        </button>
       </div>
+    </div>
+  </div>
 
-      <!-- Create Family -->
-      <div id="create-box" class="login-box hidden">
-        <h2>Create New Family</h2>
-        <div id="create-error" class="error-msg"></div>
-        <div id="create-success" class="success-msg"></div>
-        <form id="create-form">
-          <div class="form-group">
-            <label for="create-name">Family Name</label>
-            <input type="text" id="create-name" placeholder="e.g. The Smiths" required>
-          </div>
-          <div class="form-group">
-            <label for="create-id">Family ID</label>
-            <input type="text" id="create-id" placeholder="e.g. smith_family (lowercase, underscores)" required>
-          </div>
-          <div class="form-group">
-            <label for="create-phone">Device Phone Number</label>
-            <input type="tel" id="create-phone" placeholder="+1XXXXXXXXXX" required>
-          </div>
-          <div class="form-group">
-            <label for="create-passphrase">Passphrase</label>
-            <input type="text" id="create-passphrase" placeholder="Shared family passphrase" required>
-          </div>
-          <button type="submit" class="btn btn-green">Create Family</button>
-        </form>
-        <button class="toggle-link" id="show-signin">Back to Sign In</button>
+  <!-- FAMILY PICKER (shown after Google auth) -->
+  <div id="family-screen" class="hidden">
+    <div class="login-wrapper">
+      <h1 class="login-title">AnsweringMachine</h1>
+      <p class="login-subtitle">Signed in as <span id="user-email" style="color:var(--accent)"></span></p>
+
+      <div class="login-box" style="max-width:480px;">
+        <h2>Select Family</h2>
+
+        <!-- Owned families list -->
+        <div id="owned-families"></div>
+
+        <!-- Join existing family -->
+        <div id="join-box" style="margin-top:1.25rem;">
+          <h3 style="color:var(--accent3);font-size:0.95rem;margin-bottom:0.75rem;">Join Existing Family</h3>
+          <div id="join-error" class="error-msg"></div>
+          <form id="join-form">
+            <div class="form-group">
+              <label for="join-family-id">Family ID</label>
+              <input type="text" id="join-family-id" placeholder="e.g. smith_family" required>
+            </div>
+            <div class="form-group">
+              <label for="join-passphrase">Passphrase</label>
+              <input type="password" id="join-passphrase" placeholder="Family passphrase" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Join Family</button>
+          </form>
+        </div>
+
+        <!-- Create new family -->
+        <button class="toggle-link" id="show-create">Or create a new family</button>
+        <div id="create-box" class="hidden" style="margin-top:1rem;">
+          <h3 style="color:var(--accent3);font-size:0.95rem;margin-bottom:0.75rem;">Create New Family</h3>
+          <div id="create-error" class="error-msg"></div>
+          <div id="create-success" class="success-msg"></div>
+          <form id="create-form">
+            <div class="form-group">
+              <label for="create-name">Family Name</label>
+              <input type="text" id="create-name" placeholder="e.g. The Smiths" required>
+            </div>
+            <div class="form-group">
+              <label for="create-id">Family ID</label>
+              <input type="text" id="create-id" placeholder="e.g. smith_family (lowercase, underscores)" required>
+            </div>
+            <div class="form-group">
+              <label for="create-phone">Device Phone Number</label>
+              <input type="tel" id="create-phone" placeholder="+1XXXXXXXXXX" required>
+            </div>
+            <div class="form-group">
+              <label for="create-passphrase">Passphrase</label>
+              <input type="text" id="create-passphrase" placeholder="Shared family passphrase" required>
+            </div>
+            <button type="submit" class="btn btn-green">Create Family</button>
+          </form>
+          <button class="toggle-link" id="hide-create">Hide</button>
+        </div>
+
+        <div style="margin-top:1.25rem;text-align:center;">
+          <button class="btn-logout" id="btn-switch-account">Sign out</button>
+        </div>
       </div>
     </div>
   </div>

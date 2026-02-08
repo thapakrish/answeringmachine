@@ -434,6 +434,56 @@ body {
   }
 }
 
+/* Google Sign-In button */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.7rem 1.5rem;
+  background: #fff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-google:hover {
+  background: #f7f8f8;
+  border-color: #c6c6c6;
+}
+
+/* Family picker cards */
+.family-pick-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.family-pick-btn:hover {
+  border-color: var(--accent);
+}
+
+.family-pick-btn .fpb-name {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.family-pick-btn .fpb-id {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 /* Hidden utility */
 .hidden {
   display: none !important;
