@@ -5,12 +5,12 @@ from typing import AsyncIterable
 
 import litellm
 from line.agent import AgentClass, TurnEnv
-from line.events import AgentSendText, AgentUpdateCall, CallEnded, CallStarted, InputEvent, OutputEvent, UserTextSent
+from line.events import AgentSendText, CallEnded, CallStarted, InputEvent, OutputEvent, UserTextSent
 from loguru import logger
 from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call, web_search
 
 from agents.prompts import COMPANION_PROMPT, DEVICE_USER_GREETER_PROMPT
-from agents.role_config import get_role_config
+from tools.language_tools import make_language_switch_tools
 from tools.message_tools import make_hear_messages
 from tools.reminder_tools import make_hear_reminders, make_set_reminder
 from tools.search_tools import make_browse_website
@@ -46,7 +46,6 @@ class DeviceUserAgent(AgentClass):
         self._metadata = metadata
         self._db = db
         self._api_key = os.getenv("ANTHROPIC_API_KEY")
-        self._role_config = get_role_config(metadata["member_role"])
 
         hear_messages = make_hear_messages(db, metadata["family_id"], metadata["member_id"])
         set_reminder = make_set_reminder(db, metadata["family_id"], metadata["member_id"])
@@ -73,6 +72,7 @@ class DeviceUserAgent(AgentClass):
             description="Transfer to companion chat mode for friendly conversation. Use when the user wants to chat, talk, or have a conversation.",
         )
 
+        # Create greeter first without language tools
         self._greeter = LlmAgent(
             model="anthropic/claude-haiku-4-5-20251001",
             api_key=self._api_key,
@@ -86,6 +86,10 @@ class DeviceUserAgent(AgentClass):
                 ),
             ),
         )
+
+        # Now create language tools with greeter ref so they can update its system prompt
+        language_tools = make_language_switch_tools(greeter_agent=self._greeter)
+        self._greeter._tools.extend(language_tools)
 
         self.model_id = "anthropic/claude-haiku-4-5-20251001"
         self._input_history: list[InputEvent] = []
@@ -134,7 +138,6 @@ class DeviceUserAgent(AgentClass):
     async def process(self, env: TurnEnv, event: InputEvent) -> AsyncIterable[OutputEvent]:
         if isinstance(event, CallStarted):
             logger.info(f"DeviceUserAgent: CallStarted for {self._metadata.get('member_name')}")
-            yield AgentUpdateCall(voice_id=self._role_config["voice_id"])
             try:
                 await self._load_memory_context()
                 greeting = await _build_greeting(self._metadata, self._db)

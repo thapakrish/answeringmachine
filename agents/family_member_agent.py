@@ -9,6 +9,7 @@ from loguru import logger
 from line.llm_agent import LlmAgent, LlmConfig, end_call, web_search
 
 from agents.prompts import FAMILY_MEMBER_GREETER_PROMPT
+from tools.language_tools import make_language_switch_tools
 from tools.message_tools import make_leave_anonymous, make_leave_message
 from tools.reminder_tools import make_add_reminder
 from tools.search_tools import make_browse_website
@@ -36,6 +37,7 @@ class FamilyMemberAgent(AgentClass):
         device_user_name = "the device user"
         self._device_user_name = device_user_name
 
+        # Create greeter first without language tools
         self._greeter = LlmAgent(
             model="anthropic/claude-haiku-4-5-20251001",
             api_key=self._api_key,
@@ -48,6 +50,10 @@ class FamilyMemberAgent(AgentClass):
                 ),
             ),
         )
+
+        # Now create language tools with greeter ref so they can update its system prompt
+        language_tools = make_language_switch_tools(greeter_agent=self._greeter)
+        self._greeter._tools.extend(language_tools)
         self.model_id = "anthropic/claude-haiku-4-5-20251001"
         self._input_history: list[InputEvent] = []
 

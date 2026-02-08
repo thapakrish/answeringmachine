@@ -1,62 +1,59 @@
-"""Language handoff tools — switch the agent to speak in another language."""
+"""Language switching tools — switch the agent's voice and response language.
 
-import os
+Instead of handing off to a separate agent (slow, breaks STT),
+these tools switch the voice AND update the system prompt so the
+LLM responds in the target language. The same agent stays in
+control with all its tools and memory.
+"""
 
-from line.events import AgentUpdateCall
-from line.llm_agent import LlmAgent, LlmConfig, agent_as_handoff, end_call, handoff_tool, ToolEnv
-from line.llm_agent.tools.utils import construct_function_tool
+from typing import Annotated
 
-from agents.role_config import get_language_configs
+from line.events import AgentSendText, AgentUpdateCall
+from line.llm_agent import LlmConfig, passthrough_tool, ToolEnv
+
+from agents.role_config import LANGUAGE_CONFIGS
 
 
-def make_language_handoffs(role: str, api_key: str = None):
-    """Build language handoff tools for a given role.
+def make_language_switch_tools(greeter_agent=None):
+    """Build language switch tools from LANGUAGE_CONFIGS.
 
-    Returns a list of (handoff_tool, llm_agent) tuples.
-    The llm_agent is returned so the caller can clean it up on CallEnded.
+    Args:
+        greeter_agent: The LlmAgent whose system prompt should be updated
+            on language switch. If None, only the voice changes (no prompt update).
+
+    Returns a list of passthrough tools that switch voice + update system prompt.
     """
-    api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-    lang_configs = get_language_configs(role)
-    results = []
+    tools = []
 
-    for lang_cfg in lang_configs:
-        lang_name = lang_cfg["name"]
-        voice_id = lang_cfg["voice_id"]
+    for code, cfg in LANGUAGE_CONFIGS.items():
+        lang_name = cfg["name"]
+        voice_id = cfg["voice_id"]
+        confirmation = cfg["handoff_message"]
+        description = cfg["handoff_description"]
+        system_prompt = cfg["system_prompt"]
 
-        lang_agent = LlmAgent(
-            model="anthropic/claude-haiku-4-5-20251001",
-            api_key=api_key,
-            tools=[end_call],
-            config=LlmConfig(
-                system_prompt=lang_cfg["system_prompt"],
-                introduction=lang_cfg["handoff_message"],
-            ),
-        )
+        # Use closure to capture per-language values
+        def _make_tool(vid, conf, lname, desc, prompt):
+            async def _switch(ctx: ToolEnv):
+                # Update the LLM system prompt so it responds in the new language
+                if greeter_agent is not None:
+                    new_config = LlmConfig(system_prompt=prompt)
+                    greeter_agent._config = new_config
+                    greeter_agent._llm._config = new_config
 
-        # Wrap agent_as_handoff but prepend AgentUpdateCall for voice switch
-        inner_handoff = agent_as_handoff(
-            lang_agent,
-            name=f"switch_to_{lang_name.lower()}",
-            description=lang_cfg["handoff_description"],
-        )
-
-        # Wrap handoff to emit AgentUpdateCall for voice switch before delegating
-        original_func = inner_handoff.func
-
-        def _make_handoff(vid, orig):
-            async def _voice_switching_handoff(ctx: ToolEnv, event):
+                # Switch the Cartesia TTS voice
                 yield AgentUpdateCall(voice_id=vid)
-                async for output in orig(ctx, event=event):
-                    yield output
-            return _voice_switching_handoff
+                # Speak confirmation in the target language
+                yield AgentSendText(text=conf)
 
-        tool = construct_function_tool(
-            _make_handoff(voice_id, original_func),
-            name=inner_handoff.name,
-            description=inner_handoff.description,
-            tool_type=inner_handoff.tool_type,
-        )
+            # Set name and docstring BEFORE decorating so _ToolDescriptor captures them
+            _switch.__name__ = f"switch_to_{lname.lower()}"
+            _switch.__doc__ = desc
 
-        results.append((tool, lang_agent))
+            tool = passthrough_tool(_switch)
+            tool.name = f"switch_to_{lname.lower()}"
+            return tool
 
-    return results
+        tools.append(_make_tool(voice_id, confirmation, lang_name, description, system_prompt))
+
+    return tools
