@@ -7,3 +7,7 @@ PLAN.md
 PRD.md
 TASKS.md
 VISION.md
+public/
+firebase.json
+firestore.rules
+firestore.indexes.json
