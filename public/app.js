@@ -7,14 +7,9 @@ import {
   serverTimestamp, query, where, arrayUnion,
 } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-firestore.js";
 
-const app = initializeApp({
-  apiKey: "REDACTED_API_KEY",
-  authDomain: "contlearn.firebaseapp.com",
-  projectId: "contlearn",
-  storageBucket: "contlearn.firebasestorage.app",
-  messagingSenderId: "764252345870",
-  appId: "1:764252345870:web:819df01d41a6ca52068e5f",
-});
+// Config loaded at runtime from Firebase Hosting (no keys in source)
+const firebaseConfig = await fetch("/__/firebase/init.json").then((r) => r.json());
+const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
